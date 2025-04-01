@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Llaveros Articulados 3D</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/exporters/STLExporter.js"></script>
+    <script src="https://threejs.org/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://threejs.org/examples/js/geometries/TextGeometry.js"></script>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        canvas { display: block; margin: auto; }
+        .controls { margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Generador de Llaveros Articulados 3D</h1>
+    <div class="controls">
+        <input type="text" id="nombre" placeholder="Escribe tu nombre" value="Python">
+        <label for="fuente">Fuente:</label>
+        <select id="fuente">
+            <option value="helvetiker">Helvetiker</option>
+            <option value="optimer">Optimer</option>
+            <option value="gentilis">Gentilis</option>
+        </select>
+        <label for="tamano">Tamaño:</label>
+        <input type="number" id="tamano" value="8" min="5" max="20">
+        <button onclick="generarLlavero()">Generar</button>
+        <button onclick="exportarSTL()">Exportar STL</button>
+    </div>
+    <div id="contenedor3D"></div><script>
+    let scene, camera, renderer, llavero;
+
+    function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth * 0.8, window.innerHeight * 0.6);
+        document.getElementById("contenedor3D").appendChild(renderer.domElement);
+        camera.position.z = 50;
+        generarLlavero();
+    }
+    
+    function generarLlavero() {
+        if (llavero) scene.remove(llavero);
+        let nombre = document.getElementById("nombre").value;
+        let fuenteSeleccionada = document.getElementById("fuente").value;
+        let tamano = parseFloat(document.getElementById("tamano").value);
+        
+        let loader = new THREE.FontLoader();
+        loader.load(`https://threejs.org/examples/fonts/${fuenteSeleccionada}_regular.typeface.json`, function(font) {
+            let material = new THREE.MeshNormalMaterial();
+            llavero = new THREE.Group();
+            
+            let offsetX = 0;
+            for (let i = 0; i < nombre.length; i++) {
+                let textoGeo = new THREE.TextGeometry(nombre[i], {
+                    font: font,
+                    size: tamano,
+                    height: 2
+                });
+                let letraMesh = new THREE.Mesh(textoGeo, material);
+                letraMesh.position.x = offsetX;
+                llavero.add(letraMesh);
+                
+                // Agregar un pequeño cilindro como articulación
+                let articulacionGeo = new THREE.CylinderGeometry(1, 1, 2, 16);
+                let articulacionMesh = new THREE.Mesh(articulacionGeo, material);
+                articulacionMesh.position.set(offsetX + tamano / 2, -tamano / 2, 0);
+                llavero.add(articulacionMesh);
+                
+                offsetX += tamano + 3; // Espaciado entre letras
+            }
+            
+            scene.add(llavero);
+            render();
+        });
+    }
+    
+    function exportarSTL() {
+        if (!llavero) {
+            alert("Genera un llavero antes de exportar.");
+            return;
+        }
+        let exporter = new THREE.STLExporter();
+        let stlString = exporter.parse(llavero);
+        let blob = new Blob([stlString], { type: 'application/octet-stream' });
+        let link = document.createElement('a');
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.href = URL.createObjectURL(blob);
+        link.download = 'llavero_articulado.stl';
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    function render() {
+        requestAnimationFrame(render);
+        renderer.render(scene, camera);
+    }
+
+    init();
+</script>
+
+</body>
+</html>
